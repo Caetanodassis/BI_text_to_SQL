@@ -5,7 +5,7 @@ from sqlalchemy.engine import URL
 
 # CREDENCIAIS DE CONEXÃO COM O BANCO DE DADOS
 USUARIO = 'postgres'
-SENHA = 'Assisdcaetano17@'
+SENHA = 'senha'
 HOST = 'localhost'
 PORTA = '5432'
 BANCO = 'projeto_BI_TEXT_TO_SQL'
