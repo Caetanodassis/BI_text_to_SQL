@@ -1,6 +1,7 @@
+```markdown
 # 🤖 BI Copiloto — Agente Text-to-SQL em Português
 
-> Um agente de IA que entende perguntas de negócio em linguagem natural, traduz para SQL, executa no banco de dados e responde com gráfico + resumo executivo — inspirado no **Genie (Databricks)**, construído do zero e rodando 100% local com **PostgreSQL**.
+> Um agente de IA que entende perguntas de negócio em linguagem natural, traduz para SQL, executa no banco de dados e responde com análise — inspirado no **Genie (Databricks)**, construído do zero e integrado via **Google Gemini (Nuvem)** com **PostgreSQL**.
 
 ---
 
@@ -10,14 +11,14 @@ Empresas de grande porte (bancos, e-commerces, fintechs) estão investindo em fe
 
 Este projeto reproduz esse conceito de forma independente, com o objetivo de:
 
-- Demonstrar domínio prático de **engenharia de dados** (modelagem relacional, ETL, SQL avançado) combinado com **GenAI/agentes de IA** (LangChain/LangGraph);
-- Entender e implementar, na prática, os componentes internos de uma ferramenta como o Genie: introspecção de schema, geração de SQL via LLM, camada de segurança, escolha automática de visualização e sumarização executiva;
+- Demonstrar domínio prático de **engenharia de dados** (modelagem relacional, ETL, SQL avançado) combinado com **GenAI/agentes de IA**;
+- Entender e implementar, na prática, os componentes internos de uma ferramenta como o Genie: introspecção de schema, geração de SQL via LLM e execução integrada;
 - Construir um artefato de portfólio que una **BI tradicional** e **IA aplicada a dados**, área de forte demanda no mercado.
 
-**Pergunta que o agente deve responder, por exemplo:**
-> *"Qual foi o produto com maior queda de vendas no segundo trimestre?"*
+**Pergunta que o agente já responde, por exemplo:**
+> *"Quantos clientes temos no estado de São Paulo (SP)?"*
 
-E devolver: a query SQL gerada, o gráfico correspondente e um resumo em linguagem natural da resposta.
+E devolve no terminal: a query SQL gerada pelo Gemini e o resultado executado diretamente no PostgreSQL.
 
 ---
 
@@ -29,26 +30,16 @@ E devolver: a query SQL gerada, o gráfico correspondente e um resumo em linguag
 Pergunta do usuário (PT-BR)
 │
 ▼
-Agente Text-to-SQL (LangChain/LangGraph)
-│  contexto: schema do banco (information_schema)
+Agente Text-to-SQL (Google Gemini 2.5 Flash / 2.0 Flash)
+│  contexto: schema do banco Olist (PostgreSQL)
 ▼
 Geração de query SQL
 │
 ▼
-Camada de validação e segurança
-(permite apenas SELECT, usuário read-only, LIMIT automático)
+Execução no PostgreSQL via SQLAlchemy
 │
 ▼
-Execução no PostgreSQL
-│
-▼
-┌────┴────┐
-▼         ▼
-Gráfico    Resumo executivo
-(Plotly)   (LLM)
-│
-▼
-Interface (Streamlit)
+Exibição de colunas, linhas e resultados estruturados no terminal
 
 ```
 
@@ -72,7 +63,7 @@ Dataset público **[Brazilian E-Commerce Public Dataset by Olist](https://www.ka
 | `traducao_categoria` | `product_category_name_translation.csv` | Tradução das categorias de produto |
 | `geolocalizacao` | `olist_geolocation_dataset.csv` | Coordenadas geográficas (uso futuro/opcional) |
 
-Todas as tabelas possuem chaves primárias e relacionamentos (FKs) definidos, garantindo integridade referencial para permitir consultas com JOINs complexos — essencial para o agente responder perguntas de negócio reais.
+Todas as tabelas possuem chaves primárias e relacionamentos (FKs) definidos, garantindo integridade referencial para permitir consultas com JOINs complexos.
 
 ---
 
@@ -80,11 +71,9 @@ Todas as tabelas possuem chaves primárias e relacionamentos (FKs) definidos, ga
 
 - **Banco de dados:** PostgreSQL (local)
 - **Linguagem:** Python
-- **ETL:** Pandas + SQLAlchemy
-- **Agente de IA:** LangChain / LangGraph (em desenvolvimento)
-- **LLM:** API Claude/OpenAI (em desenvolvimento)
-- **Visualização:** Plotly (em desenvolvimento)
-- **Interface:** Streamlit (em desenvolvimento)
+- **ETL & Conexão:** Pandas + SQLAlchemy + Psycopg2
+- **IA Generativa:** Google GenAI SDK (`google-genai`)
+- **Modelo LLM:** Gemini (Flash)
 
 ---
 
@@ -95,14 +84,12 @@ Todas as tabelas possuem chaves primárias e relacionamentos (FKs) definidos, ga
 - [x] Definição de chaves primárias e estrangeiras (`adicionar_relacionamento_nas_tabelas.sql`)
 - [x] Correção de inconsistências do dataset original (categorias de produto faltantes)
 - [x] Camada de introspecção de schema (`information_schema`) para contexto do LLM (`introspeccao.py`)
-- [ ] Agente Text-to-SQL (versão manual, sem framework)
-- [ ] Migração para LangChain (`create_sql_agent` / `SQLDatabaseChain`)
-- [ ] Camada de segurança (validação de SQL, usuário read-only, `LIMIT` automático)
+- [x] **Agente Text-to-SQL manual funcional (`agente_manual.py`) integrado ao PostgreSQL e Gemini**
+- [ ] Camada de segurança avançada (validação de SQL, usuário read-only, `LIMIT` automático)
 - [ ] Geração automática de gráfico conforme o shape do resultado
 - [ ] Geração de resumo executivo via LLM
 - [ ] Interface em Streamlit
 - [ ] Testes com bateria de perguntas de negócio (taxa de acerto)
-- [ ] (v2) Refatoração do fluxo para LangGraph com auto-correção de erros de SQL
 
 ---
 
@@ -113,63 +100,51 @@ Todas as tabelas possuem chaves primárias e relacionamentos (FKs) definidos, ga
 
 bi_text_to_sql/
 ├── README.md
-├── carregar_olisit.py                          # Script de ETL: carrega os CSVs Olist no PostgreSQL
+├── agente_manual.py                    # Script principal do Agente Text-to-SQL (Gemini + PostgreSQL)
+├── carregar_olisit.py                  # Script de ETL: carrega os CSVs Olist no PostgreSQL
 ├── adicionar_relacionamento_nas_tabelas.sql     # Criação de PKs, FKs e correções de dados
-└── introspeccao.py                             # Extração de schema do information_schema para contexto de IA
+└── introspeccao.py                     # Extração de schema do information_schema para contexto de IA
 
 ```
 
 ---
 
-## 🚀 Como Rodar (setup atual)
+## 🚀 Como Rodar o Projeto
 
-1. Tenha o PostgreSQL rodando localmente (ou via Docker)
-2. Crie um banco de dados vazio (ex: `projeto_BI_TEXT_TO_SQL`)
-3. Baixe o dataset Olist no [Kaggle](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce) e ajuste os caminhos dos arquivos em `carregar_olisit.py`
-4. Instale as dependências:
+1. Tenha o PostgreSQL rodando localmente (ou via Docker).
+2. Crie um banco de dados vazio chamado `projeto_BI_TEXT_TO_SQL`.
+3. Baixe o dataset Olist no [Kaggle](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce) e execute a carga dos dados com `carregar_olisit.py` e o script SQL de relacionamentos.
+4. Instale as dependências do projeto:
    ```bash
-   pip install pandas sqlalchemy psycopg2-binary
+   pip install pandas sqlalchemy psycopg2-binary google-genai
 
 ```
 
-5. Execute a carga dos dados:
+5. Configure a sua chave de API do Gemini como uma variável de ambiente no terminal:
 ```bash
-python carregar_olisit.py
+export GEMINI_API_KEY="sua_chave_aqui"
 
 ```
 
 
-6. Execute o script de relacionamentos no seu client SQL (DBeaver, pgAdmin, ou via `psql`):
+6. Execute o agente interativo:
 ```bash
-psql -U postgres -d projeto_BI_TEXT_TO_SQL -f adicionar_relacionamento_nas_tabelas.sql
+python agente_manual.py
 
 ```
 
 
-7. Execute o script de introspecção para validar a extração do schema:
-```bash
-python introspeccao.py
-
-```
-
-
-
----
-
-## 🗺️ Próximos Passos
-
-Ver seção [Status Atual do Projeto](https://www.google.com/search?q=%23-status-atual-do-projeto) acima — cada item será marcado como concluído e documentado com mais detalhe conforme o desenvolvimento avança.
 
 ---
 
 ## 👤 Autor
 
 **Vinícius Caetano**
-Analista de Dados Jr. | Estudante de ADS
+
+Analista de Dados Jr.
+
 [GitHub](https://github.com/Caetanodassis)
 
 ```
-
-Basta substituir o conteúdo do seu `README.md` atual por este texto, salvar o arquivo e atualizar o commit no git se desejar!
 
 ```
